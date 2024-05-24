@@ -124,18 +124,20 @@ int main(void)
   MX_I2C1_Init();
   MX_FDCAN1_Init();
   /* USER CODE BEGIN 2 */
-//  FDCAN_FilterTypeDef sFilterConfig =
-//  {
-//	  .FilterConfig = FDCAN_FILTER_TO_RXFIFO0,
-//	  .FilterIndex = 0,
-//	  .FilterID1 = 0x123,
-//	  .FilterID2 = 0x124,
-//	  .IdType = FDCAN_STANDARD_ID,
-//	  .FilterType = FDCAN_FILTER_RANGE
-//  };
-//
-//  HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig);
-//  HAL_FDCAN_Start(&hfdcan1);
+
+  FDCAN_FilterTypeDef sFilterConfig =
+  {
+	  .FilterConfig = FDCAN_FILTER_TO_RXFIFO0,
+	  .FilterIndex = 0,
+	  .FilterID1 = 0x123,
+	  .FilterID2 = 0x124,
+	  .IdType = FDCAN_STANDARD_ID,
+	  .FilterType = FDCAN_FILTER_RANGE
+  };
+
+  HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig);
+  HAL_FDCAN_Start(&hfdcan1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -149,19 +151,19 @@ int main(void)
 	  MCP4922_SendData(ch,dAC);
 	  EEPROMWriteExample();
 	  EEPROMReadExample(eepromDataReadBack, 4);
-//
-//	  FDCAN_TxHeaderTypeDef pTxHeader = {
-//	  .BitRateSwitch = FDCAN_BRS_OFF,
-//	  .DataLength = FDCAN_DLC_BYTES_8,
-//	  .ErrorStateIndicator = FDCAN_ESI_ACTIVE,
-//	  .FDFormat = FDCAN_DATA_FRAME,
-//	  .IdType = FDCAN_STANDARD_ID,
-//	  .Identifier = 0x123,
-//	  .MessageMarker = 1,
-//	  .TxEventFifoControl = FDCAN_TX_EVENT
-//	  };
-//
-//	  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &pTxHeader, pTxData);
+
+	  FDCAN_TxHeaderTypeDef pTxHeader = {
+	  .BitRateSwitch = FDCAN_BRS_OFF,
+	  .DataLength = FDCAN_DLC_BYTES_8,
+	  .ErrorStateIndicator = FDCAN_ESI_ACTIVE,
+	  .FDFormat = FDCAN_DATA_FRAME,
+	  .IdType = FDCAN_STANDARD_ID,
+	  .Identifier = 0x123,
+	  .MessageMarker = 1,
+	  .TxEventFifoControl = FDCAN_TX_EVENT
+	  };
+
+	  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &pTxHeader, pTxData);
       HAL_Delay(1000);
   }
   /* USER CODE END 3 */
