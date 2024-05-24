@@ -148,10 +148,14 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
+	  //SPIDataSent
 	  MCP4922_SendData(ch,dAC);
+
+	  //I2cWrite & Read Functions
 	  EEPROMWriteExample();
 	  EEPROMReadExample(eepromDataReadBack, 4);
 
+	  //CAN Tx Head Setup
 	  FDCAN_TxHeaderTypeDef pTxHeader = {
 	  .BitRateSwitch = FDCAN_BRS_OFF,
 	  .DataLength = FDCAN_DLC_BYTES_8,
@@ -163,7 +167,10 @@ int main(void)
 	  .TxEventFifoControl = FDCAN_TX_EVENT
 	  };
 
+	  //CAN Sent Message
 	  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &pTxHeader, pTxData);
+
+	  //Simple Delay
       HAL_Delay(1000);
   }
   /* USER CODE END 3 */
