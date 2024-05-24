@@ -57,13 +57,14 @@ SPI_HandleTypeDef hspi3;
 uint16_t dAC = 0;
 uint8_t ch = 0;
 
-uint8_t data[4] = { 0xff, 0xff, 0xff, 0xff };
+uint8_t data[6] = { 0x65, 0x34, 0x05, 0x00, 0x05, 0x10};
 uint8_t eepromExampleWriteFlag = 0;
 uint8_t eepromExampleReadFlag = 0;
-uint8_t eepromDataReadBack[4];
+uint8_t eepromDataReadBack[6];
 
 FDCAN_RxHeaderTypeDef pRxHeader;
-uint8_t pTxData[8]={0xFF,0x00,0xAA,0x55,0x12,0x34,0x56,0x78};
+uint8_t redata[8];
+uint8_t pTxData[8]={0x72,0x65,0x71,0x75,0x65,0x73,0x74,0x61};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -77,7 +78,6 @@ static void MX_FDCAN1_Init(void);
 /* USER CODE BEGIN PFP */
 
 //SPI MCP
-void SPITxRx_WriteIO(uint8_t dacSelect, uint16_t dacValue);
 void MCP4922_SendData(uint8_t chh, uint16_t data);
 //I2C Mem
 void EEPROMWriteExample();
@@ -129,8 +129,7 @@ int main(void)
   {
 	  .FilterConfig = FDCAN_FILTER_TO_RXFIFO0,
 	  .FilterIndex = 0,
-	  .FilterID1 = 0x123,
-	  .FilterID2 = 0x124,
+	  .FilterID1 = 0x45,
 	  .IdType = FDCAN_STANDARD_ID,
 	  .FilterType = FDCAN_FILTER_RANGE
   };
@@ -153,16 +152,17 @@ int main(void)
 
 	  //I2cWrite & Read Functions
 	  EEPROMWriteExample();
-	  EEPROMReadExample(eepromDataReadBack, 4);
+	  EEPROMReadExample(eepromDataReadBack, 6);
 
 	  //CAN Tx Head Setup
-	  FDCAN_TxHeaderTypeDef pTxHeader = {
+	  FDCAN_TxHeaderTypeDef pTxHeader =
+	  {
 	  .BitRateSwitch = FDCAN_BRS_OFF,
 	  .DataLength = FDCAN_DLC_BYTES_8,
 	  .ErrorStateIndicator = FDCAN_ESI_ACTIVE,
 	  .FDFormat = FDCAN_DATA_FRAME,
 	  .IdType = FDCAN_STANDARD_ID,
-	  .Identifier = 0x123,
+	  .Identifier = 0x67,
 	  .MessageMarker = 1,
 	  .TxEventFifoControl = FDCAN_TX_EVENT
 	  };
@@ -172,6 +172,7 @@ int main(void)
 
 	  //Simple Delay
       HAL_Delay(1000);
+      HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &pRxHeader, redata);
   }
   /* USER CODE END 3 */
 }
@@ -505,7 +506,7 @@ void EEPROMWriteExample()
 {
 	if (eepromExampleWriteFlag && hi2c1.State == HAL_I2C_STATE_READY)
 	{
-		HAL_I2C_Mem_Write_IT(&hi2c1, EEPROM_ADDR, 0x2C, I2C_MEMADD_SIZE_16BIT, data, 4);
+		HAL_I2C_Mem_Write_IT(&hi2c1, EEPROM_ADDR, 0x99, I2C_MEMADD_SIZE_16BIT, data, 6);
 		eepromExampleWriteFlag = 0;
 	}
 }
@@ -514,7 +515,7 @@ void EEPROMReadExample(uint8_t *Rdata, uint16_t len)
 {
 	if (eepromExampleReadFlag && hi2c1.State == HAL_I2C_STATE_READY)
 	{
-		HAL_I2C_Mem_Read_IT(&hi2c1, EEPROM_ADDR, 0x2c, I2C_MEMADD_SIZE_16BIT, Rdata, len);
+		HAL_I2C_Mem_Read_IT(&hi2c1, EEPROM_ADDR, 0x99, I2C_MEMADD_SIZE_16BIT, Rdata, len);
 		eepromExampleReadFlag = 0;
 	}
 }
