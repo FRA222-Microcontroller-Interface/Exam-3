@@ -480,7 +480,7 @@ static void MX_GPIO_Init(void)
 void MCP4922_SendData(uint8_t chh,uint16_t data)
 {
     // Combine command and data
-	uint16_t command = MCP4922_CMDB | (data & 0x0FFF);
+	uint16_t command = MCP4922_CMDA | (data & 0x0FFF);
 
 	if (chh == 0)
 	{
