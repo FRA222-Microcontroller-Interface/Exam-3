@@ -31,7 +31,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define MCP4922_CMDA 0x7000 //DAC_A
+#define MCP4922_CMDB 0xF000 //DAC_B
+#define EEPROM_ADDR 0b10100000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -40,26 +42,42 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
+DMA_HandleTypeDef hdma_i2c1_rx;
+DMA_HandleTypeDef hdma_i2c1_tx;
+
 UART_HandleTypeDef hlpuart1;
 
 SPI_HandleTypeDef hspi3;
 
 /* USER CODE BEGIN PV */
-#define MCP4922_CMD 0x7000 //DAC_A
-//#define MCP4922_CMD 0xF000 //DAC_B
 
-uint8_t Mode = 0;
 uint16_t dAC = 0;
+uint8_t ch = 0;
+
+uint8_t data[4] = { 0xff, 0xff, 0xff, 0xff };
+uint8_t eepromExampleWriteFlag = 0;
+uint8_t eepromExampleReadFlag = 0;
+uint8_t eepromDataReadBack[4];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_LPUART1_UART_Init(void);
 static void MX_SPI3_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
+
+//SPI MCP
 void SPITxRx_WriteIO(uint8_t dacSelect, uint16_t dacValue);
-void MCP4922_SendData(uint16_t data);
+void MCP4922_SendData(uint8_t chh, uint16_t data);
+//I2C Mem
+void EEPROMWriteExample();
+void EEPROMReadExample(uint8_t *Rdata, uint16_t len);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -95,8 +113,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_LPUART1_UART_Init();
   MX_SPI3_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   /* USER CODE END 2 */
 
@@ -107,9 +127,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, SET);
-//      SPITxRx_WriteIO(Mode,dAC); // 1 = B,0 =A
-	  MCP4922_SendData(2048);
+
+	  MCP4922_SendData(ch,dAC);
+	  EEPROMWriteExample();
+	  EEPROMReadExample(eepromDataReadBack, 4);
       HAL_Delay(1000);
   }
   /* USER CODE END 3 */
@@ -159,6 +180,54 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.Timing = 0x30A0A7FB;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
 }
 
 /**
@@ -249,6 +318,26 @@ static void MX_SPI3_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMAMUX1_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -305,19 +394,46 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void MCP4922_SendData(uint16_t data)
+void MCP4922_SendData(uint8_t chh,uint16_t data)
 {
     // Combine command and data
-    uint16_t command = MCP4922_CMD | (data & 0x0FFF);
+	uint16_t command = MCP4922_CMDB | (data & 0x0FFF);
+
+	if (chh == 0)
+	{
+		command = MCP4922_CMDA | (data & 0x0FFF);
+	}
+	else if (chh == 1)
+	{
+		command = MCP4922_CMDB | (data & 0x0FFF);
+	}
 
     // Select the MCP4922 by setting CS low
-    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET);  // Assuming PA4 is connected to CS
+    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_RESET);
 
     // Transmit the data via SPI
     HAL_SPI_Transmit(&hspi3, (uint8_t*)&command, 1, 10);
 
     // Deselect the MCP4922 by setting CS high
     HAL_GPIO_WritePin(GPIOD, GPIO_PIN_2, GPIO_PIN_SET);
+}
+
+void EEPROMWriteExample()
+{
+	if (eepromExampleWriteFlag && hi2c1.State == HAL_I2C_STATE_READY)
+	{
+		HAL_I2C_Mem_Write_IT(&hi2c1, EEPROM_ADDR, 0x2C, I2C_MEMADD_SIZE_16BIT, data, 4);
+		eepromExampleWriteFlag = 0;
+	}
+}
+
+void EEPROMReadExample(uint8_t *Rdata, uint16_t len)
+{
+	if (eepromExampleReadFlag && hi2c1.State == HAL_I2C_STATE_READY)
+	{
+		HAL_I2C_Mem_Read_IT(&hi2c1, EEPROM_ADDR, 0x2c, I2C_MEMADD_SIZE_16BIT, Rdata, len);
+		eepromExampleReadFlag = 0;
+	}
 }
 /* USER CODE END 4 */
 
