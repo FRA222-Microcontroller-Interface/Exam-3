@@ -42,6 +42,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+FDCAN_HandleTypeDef hfdcan1;
+
 I2C_HandleTypeDef hi2c1;
 DMA_HandleTypeDef hdma_i2c1_rx;
 DMA_HandleTypeDef hdma_i2c1_tx;
@@ -60,6 +62,8 @@ uint8_t eepromExampleWriteFlag = 0;
 uint8_t eepromExampleReadFlag = 0;
 uint8_t eepromDataReadBack[4];
 
+FDCAN_RxHeaderTypeDef pRxHeader;
+uint8_t pTxData[8]={0xFF,0x00,0xAA,0x55,0x12,0x34,0x56,0x78};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,6 +73,7 @@ static void MX_DMA_Init(void);
 static void MX_LPUART1_UART_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_FDCAN1_Init(void);
 /* USER CODE BEGIN PFP */
 
 //SPI MCP
@@ -117,7 +122,20 @@ int main(void)
   MX_LPUART1_UART_Init();
   MX_SPI3_Init();
   MX_I2C1_Init();
+  MX_FDCAN1_Init();
   /* USER CODE BEGIN 2 */
+//  FDCAN_FilterTypeDef sFilterConfig =
+//  {
+//	  .FilterConfig = FDCAN_FILTER_TO_RXFIFO0,
+//	  .FilterIndex = 0,
+//	  .FilterID1 = 0x123,
+//	  .FilterID2 = 0x124,
+//	  .IdType = FDCAN_STANDARD_ID,
+//	  .FilterType = FDCAN_FILTER_RANGE
+//  };
+//
+//  HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig);
+//  HAL_FDCAN_Start(&hfdcan1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -131,6 +149,19 @@ int main(void)
 	  MCP4922_SendData(ch,dAC);
 	  EEPROMWriteExample();
 	  EEPROMReadExample(eepromDataReadBack, 4);
+//
+//	  FDCAN_TxHeaderTypeDef pTxHeader = {
+//	  .BitRateSwitch = FDCAN_BRS_OFF,
+//	  .DataLength = FDCAN_DLC_BYTES_8,
+//	  .ErrorStateIndicator = FDCAN_ESI_ACTIVE,
+//	  .FDFormat = FDCAN_DATA_FRAME,
+//	  .IdType = FDCAN_STANDARD_ID,
+//	  .Identifier = 0x123,
+//	  .MessageMarker = 1,
+//	  .TxEventFifoControl = FDCAN_TX_EVENT
+//	  };
+//
+//	  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &pTxHeader, pTxData);
       HAL_Delay(1000);
   }
   /* USER CODE END 3 */
@@ -180,6 +211,49 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief FDCAN1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_FDCAN1_Init(void)
+{
+
+  /* USER CODE BEGIN FDCAN1_Init 0 */
+
+  /* USER CODE END FDCAN1_Init 0 */
+
+  /* USER CODE BEGIN FDCAN1_Init 1 */
+
+  /* USER CODE END FDCAN1_Init 1 */
+  hfdcan1.Instance = FDCAN1;
+  hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV1;
+  hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
+  hfdcan1.Init.Mode = FDCAN_MODE_EXTERNAL_LOOPBACK;
+  hfdcan1.Init.AutoRetransmission = DISABLE;
+  hfdcan1.Init.TransmitPause = DISABLE;
+  hfdcan1.Init.ProtocolException = DISABLE;
+  hfdcan1.Init.NominalPrescaler = 17;
+  hfdcan1.Init.NominalSyncJumpWidth = 1;
+  hfdcan1.Init.NominalTimeSeg1 = 7;
+  hfdcan1.Init.NominalTimeSeg2 = 2;
+  hfdcan1.Init.DataPrescaler = 1;
+  hfdcan1.Init.DataSyncJumpWidth = 1;
+  hfdcan1.Init.DataTimeSeg1 = 7;
+  hfdcan1.Init.DataTimeSeg2 = 2;
+  hfdcan1.Init.StdFiltersNbr = 0;
+  hfdcan1.Init.ExtFiltersNbr = 0;
+  hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
+  if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN FDCAN1_Init 2 */
+
+  /* USER CODE END FDCAN1_Init 2 */
+
 }
 
 /**
